@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { FactData, AppState, InteractionStage, FactComplexity } from './types';
+import { FactData, AppState, InteractionStage, FactComplexity, DOMAINS, HistoryItem } from './types';
 import { fetchFact } from './services/geminiService';
 import FactCard from './components/FactCard';
 import Button from './components/Button';
@@ -14,12 +14,17 @@ const App: React.FC = () => {
   const [interactionStage, setInteractionStage] = useState<InteractionStage>(InteractionStage.DID_YOU_KNOW);
   const [userKnewIt, setUserKnewIt] = useState<boolean>(false);
   
+  // History and Session State
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [visitedDomains, setVisitedDomains] = useState<Set<string>>(new Set());
+  
   // Track current topic to request "more" about it
   const [currentTopic, setCurrentTopic] = useState<string | null>(null);
 
-  const loadFact = useCallback(async (topic: string | null, complexity: FactComplexity) => {
+  const loadFact = useCallback(async (topic: string, complexity: FactComplexity, currentHistory: HistoryItem[]) => {
     setAppState(AppState.LOADING);
-    const data = await fetchFact(topic, complexity);
+    const data = await fetchFact(topic, complexity, currentHistory);
+    
     setFactData(data);
     setCurrentTopic(data.domain);
     setInteractionStage(InteractionStage.DID_YOU_KNOW);
@@ -27,11 +32,27 @@ const App: React.FC = () => {
   }, []);
 
   const handleStartSelection = (domain: string) => {
-    loadFact(domain, FactComplexity.SIMPLE);
+    const newVisited = new Set(visitedDomains);
+    newVisited.add(domain);
+    setVisitedDomains(newVisited);
+    loadFact(domain, FactComplexity.SIMPLE, history);
   };
 
   const handleKnowledgeCheck = (knewIt: boolean) => {
     setUserKnewIt(knewIt);
+    
+    // Add current fact to history now that we have user feedback
+    if (factData) {
+      setHistory(prev => [
+        ...prev, 
+        { 
+          fact: factData.fact, 
+          domain: factData.domain, 
+          userKnewIt: knewIt 
+        }
+      ]);
+    }
+
     setInteractionStage(InteractionStage.WHAT_NEXT);
   };
 
@@ -39,15 +60,35 @@ const App: React.FC = () => {
     if (action === 'done') {
       setAppState(AppState.EXIT);
     } else if (action === 'new') {
-      // "New topic" loads a random domain (passing null)
-      loadFact(null, FactComplexity.SIMPLE);
+      // Find domains we haven't visited yet
+      const availableDomains = DOMAINS.filter(d => !visitedDomains.has(d));
+      
+      if (availableDomains.length > 0) {
+        // Pick a random available domain
+        const nextDomain = availableDomains[Math.floor(Math.random() * availableDomains.length)];
+        
+        // Mark as visited
+        const newVisited = new Set(visitedDomains);
+        newVisited.add(nextDomain);
+        setVisitedDomains(newVisited);
+
+        loadFact(nextDomain, FactComplexity.SIMPLE, history);
+      } else {
+        // Should not happen if button is disabled, but fallback just in case
+        console.warn("All domains visited");
+      }
     } else if (action === 'more') {
-      // If they knew it (Yes), give a complex fact.
-      // If they didn't know it (No), give another simple/regular fact.
-      const complexity = userKnewIt ? FactComplexity.COMPLEX : FactComplexity.SIMPLE;
-      loadFact(currentTopic, complexity);
+      if (currentTopic) {
+        // If they knew it (Yes), give a complex fact.
+        // If they didn't know it (No), give another simple/regular fact.
+        const complexity = userKnewIt ? FactComplexity.COMPLEX : FactComplexity.SIMPLE;
+        loadFact(currentTopic, complexity, history);
+      }
     }
   };
+
+  // Check if "New Topic" should be enabled
+  const hasMoreDomains = visitedDomains.size < DOMAINS.length;
 
   if (appState === AppState.START_SCREEN) {
     return <StartScreen onSelectDomain={handleStartSelection} />;
@@ -122,7 +163,12 @@ const App: React.FC = () => {
                         variant="primary" 
                         fullWidth 
                         onClick={() => handleNextStep('new')}
-                        className="bg-emerald-400 hover:bg-emerald-500 border-emerald-600"
+                        disabled={!hasMoreDomains}
+                        className={`
+                          ${hasMoreDomains 
+                            ? 'bg-emerald-400 hover:bg-emerald-500 border-emerald-600' 
+                            : 'bg-gray-300 border-gray-400 text-gray-500 cursor-not-allowed transform-none'}
+                        `}
                       >
                         <RefreshCw size={24} /> New Topic
                       </Button>

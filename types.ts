@@ -5,6 +5,12 @@ export interface FactData {
   backgroundColor: string; // Tailwind class suggestion
 }
 
+export interface HistoryItem {
+  fact: string;
+  domain: string;
+  userKnewIt: boolean;
+}
+
 export enum AppState {
   START_SCREEN = 'START_SCREEN',
   LOADING = 'LOADING',
@@ -26,6 +32,8 @@ export enum FactComplexity {
 export const DOMAINS = [
   'Space',
   'Animals',
-  'Machines',
-  'Outdoors'
+  'Outdoors',
+  'Food',
+  'The Human Body',
+  'Sports'
 ];

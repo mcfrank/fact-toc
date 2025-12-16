@@ -9,8 +9,22 @@ interface StartScreenProps {
 const DOMAIN_CONFIG: Record<string, { emoji: string; color: string; border: string }> = {
   'Space': { emoji: '🚀', color: 'bg-indigo-100 hover:bg-indigo-200', border: 'border-indigo-300' },
   'Animals': { emoji: '🦁', color: 'bg-orange-100 hover:bg-orange-200', border: 'border-orange-300' },
-  'Machines': { emoji: '🤖', color: 'bg-slate-100 hover:bg-slate-200', border: 'border-slate-300' },
   'Outdoors': { emoji: '🌲', color: 'bg-emerald-100 hover:bg-emerald-200', border: 'border-emerald-300' },
+  'Food': { emoji: '🍔', color: 'bg-yellow-100 hover:bg-yellow-200', border: 'border-yellow-300' },
+  'The Human Body': { emoji: '🧠', color: 'bg-rose-100 hover:bg-rose-200', border: 'border-rose-300' },
+  'Sports': { emoji: '⚽', color: 'bg-blue-100 hover:bg-blue-200', border: 'border-blue-300' },
+};
+
+const getDelayClass = (index: number) => {
+  switch(index) {
+    case 0: return 'delay-0';
+    case 1: return 'delay-100';
+    case 2: return 'delay-200';
+    case 3: return 'delay-300';
+    case 4: return 'delay-500';
+    case 5: return 'delay-700';
+    default: return 'delay-700';
+  }
 };
 
 const StartScreen: React.FC<StartScreenProps> = ({ onSelectDomain }) => {
@@ -27,7 +41,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onSelectDomain }) => {
         <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-8 w-full max-w-2xl">
           {DOMAINS.map((domain, index) => {
             const config = DOMAIN_CONFIG[domain] || { emoji: '❓', color: 'bg-gray-100', border: 'border-gray-200' };
-            const delayClass = index === 0 ? 'delay-0' : index === 1 ? 'delay-100' : index === 2 ? 'delay-200' : 'delay-300';
+            const delayClass = getDelayClass(index);
             
             return (
               <button
